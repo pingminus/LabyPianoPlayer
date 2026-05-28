@@ -5,7 +5,7 @@
     <title>MIDI WebSocket Sender</title>
   </head>
   <body>
-    <h2>MIDI → WebSocket Sender</h2>
+    <h2>Select a MIDI File/Song Connect to the WebSocket and send it</h2>
 
     <input type="file" id="midiFile" accept=".mid,.midi" />
     <br /><br />
@@ -28,8 +28,6 @@
 
         ws.onopen = () => {
           document.getElementById("status").innerText = "Connected";
-
-         
         };
 
         ws.onclose = () => {
