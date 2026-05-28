@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>MIDI WebSocket Sender</title>
+  </head>
+  <body>
+    <h2>MIDI → WebSocket Sender</h2>
+
+    <input type="file" id="midiFile" accept=".mid,.midi" />
+    <br /><br />
+
+    <button onclick="connectWS()">Connect WS</button>
+    <button onclick="sendMidi()">Send MIDI</button>
+
+    <p id="status">Disconnected</p>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.js"></script>
+
+    <script>
+      let ws;
+      let midiData;
+
+      const WS_URL = "wss://piano.laby.net/piano";
+
+      function connectWS() {
+        ws = new WebSocket(WS_URL);
+
+        ws.onopen = () => {
+          document.getElementById("status").innerText = "Connected";
+
+         
+        };
+
+        ws.onclose = () => {
+          document.getElementById("status").innerText = "Disconnected";
+        };
+
+        ws.onerror = (err) => {
+          console.log("WS error", err);
+        };
+      }
+
+      document
+        .getElementById("midiFile")
+        .addEventListener("change", async (e) => {
+          const file = e.target.files[0];
+          const arrayBuffer = await file.arrayBuffer();
+
+          midiData = new Midi(arrayBuffer);
+
+          console.log("MIDI loaded:", midiData);
+          alert("MIDI loaded!");
+        });
+
+      function sendMidi() {
+        if (!ws || ws.readyState !== 1) {
+          alert("WebSocket not connected");
+          return;
+        }
+
+        if (!midiData) {
+          alert("Load a MIDI file first");
+          return;
+        }
+
+        // Convert notes into events
+        const events = [];
+
+        midiData.tracks.forEach((track) => {
+          track.notes.forEach((note) => {
+            events.push({
+              time: note.time, // seconds
+              duration: note.duration,
+              midi: note.midi, // note number
+              velocity: note.velocity,
+            });
+          });
+        });
+
+        // Sort by time
+        events.sort((a, b) => a.time - b.time);
+
+        const start = performance.now();
+
+        events.forEach((event) => {
+          const delay = event.time * 1000;
+
+          setTimeout(() => {
+            // 🔥 THIS is the part you will likely need to adjust
+            const payload = {
+              type: "note",
+              note: event.midi,
+              velocity: Math.floor(event.velocity * 127),
+              duration: event.duration,
+            };
+
+            ws.send(JSON.stringify(payload));
+
+            console.log("Sent:", payload);
+          }, delay);
+        });
+      }
+    </script>
+  </body>
+</html>
