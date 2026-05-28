@@ -1,2 +1,2 @@
 # LabyPianoPlayer
-Midi Piano Player for Laby.net Minecraft Server
+Midi Piano Player for Laby.net Minecraft Server via Websocket
