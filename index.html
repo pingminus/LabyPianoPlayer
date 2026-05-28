@@ -3,17 +3,104 @@
   <head>
     <meta charset="UTF-8" />
     <title>MIDI WebSocket Sender</title>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: Inter, Arial, sans-serif;
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fff;
+        color: #111;
+        padding: 24px;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 520px;
+        border: 1px solid #ddd;
+        border-radius: 14px;
+        padding: 28px;
+      }
+
+      h2 {
+        margin: 0 0 24px;
+        font-size: 1.4rem;
+        font-weight: 600;
+        line-height: 1.4;
+      }
+
+      .section {
+        margin-bottom: 18px;
+      }
+
+      input[type="file"] {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        background: transparent;
+        font-size: 0.95rem;
+      }
+
+      .buttons {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        border: 1px solid #bbb;
+        background: transparent;
+        padding: 12px 18px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 0.95rem;
+        transition: 0.15s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      #status {
+        margin-top: 22px;
+        padding-top: 16px;
+        border-top: 1px solid #e5e5e5;
+        font-size: 0.95rem;
+      }
+
+      .status-label {
+        font-weight: 600;
+      }
+    </style>
   </head>
+
   <body>
-    <h2>Select a MIDI File/Song Connect to the WebSocket and send it</h2>
+    <div class="container">
+      <h2>Select a MIDI file and send it through WebSocket</h2>
 
-    <input type="file" id="midiFile" accept=".mid,.midi" />
-    <br /><br />
+      <div class="section">
+        <input type="file" id="midiFile" accept=".mid,.midi" />
+      </div>
 
-    <button onclick="connectWS()">Connect WS</button>
-    <button onclick="sendMidi()">Send MIDI</button>
+      <div class="buttons">
+        <button onclick="connectWS()">Connect WS</button>
+        <button onclick="sendMidi()">Send MIDI</button>
+      </div>
 
-    <p id="status">Disconnected</p>
+      <p id="status"><span class="status-label">Status:</span> Disconnected</p>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.js"></script>
 
@@ -23,15 +110,20 @@
 
       const WS_URL = "wss://piano.laby.net/piano";
 
+      function setStatus(text) {
+        document.getElementById("status").innerHTML =
+          `<span class="status-label">Status:</span> ${text}`;
+      }
+
       function connectWS() {
         ws = new WebSocket(WS_URL);
 
         ws.onopen = () => {
-          document.getElementById("status").innerText = "Connected";
+          setStatus("Connected");
         };
 
         ws.onclose = () => {
-          document.getElementById("status").innerText = "Disconnected";
+          setStatus("Disconnected");
         };
 
         ws.onerror = (err) => {
@@ -43,11 +135,15 @@
         .getElementById("midiFile")
         .addEventListener("change", async (e) => {
           const file = e.target.files[0];
+
+          if (!file) return;
+
           const arrayBuffer = await file.arrayBuffer();
 
           midiData = new Midi(arrayBuffer);
 
           console.log("MIDI loaded:", midiData);
+
           alert("MIDI loaded!");
         });
 
@@ -62,30 +158,25 @@
           return;
         }
 
-        // Convert notes into events
         const events = [];
 
         midiData.tracks.forEach((track) => {
           track.notes.forEach((note) => {
             events.push({
-              time: note.time, // seconds
+              time: note.time,
               duration: note.duration,
-              midi: note.midi, // note number
+              midi: note.midi,
               velocity: note.velocity,
             });
           });
         });
 
-        // Sort by time
         events.sort((a, b) => a.time - b.time);
-
-        const start = performance.now();
 
         events.forEach((event) => {
           const delay = event.time * 1000;
 
           setTimeout(() => {
-            // 🔥 THIS is the part you will likely need to adjust
             const payload = {
               type: "note",
               note: event.midi,
